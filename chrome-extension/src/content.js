@@ -235,7 +235,9 @@ class LinkedInFeedScraper {
                 const postId = postData.externalURL || `${postData.author}-${postData.postText.substring(0, 50)}`;
                 
                 const validationChecks = {
-                    hasValidAuthor: postData.author && postData.author !== 'Unknown Author' && postData.author.length > 1,
+                    hasValidAuthor: postData.author && postData.author !== 'Unknown Author' && postData.author.length > 2 && 
+                                   !postData.author.includes('•') && !postData.author.includes('followers') && 
+                                   !postData.author.includes('Premium') && !postData.author.match(/^\d+/),
                     alreadyScraped: this.scrapedPosts.has(postId),
                     reachedMaxPosts: this.posts.length >= this.maxPosts,
                     authorFound: postData.author
@@ -295,8 +297,12 @@ class LinkedInFeedScraper {
                 const hiddenSpans = link.querySelectorAll('.visually-hidden');
                 for (const span of hiddenSpans) {
                     const text = span.textContent.trim();
-                    if (text && text.length > 2 && !text.includes('•') && !text.includes('ago') && 
-                        !text.includes('Follow') && !text.includes('followers') && !text.includes('3rd+')) {
+                    if (text && text.length > 2 && text.length < 100 && 
+                        !text.includes('•') && !text.includes('ago') && 
+                        !text.includes('Follow') && !text.includes('followers') && 
+                        !text.includes('3rd+') && !text.includes('Premium') &&
+                        !text.match(/^\d+/) && !text.includes('connections') &&
+                        !text.includes('views') && !text.includes('reactions')) {
                         author = text;
                         console.log(`    ✅ Fallback method found author: "${author}"`);
                         break;
