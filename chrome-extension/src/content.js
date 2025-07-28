@@ -171,21 +171,38 @@ class LinkedInFeedScraper {
             return;
         }
 
+        console.log(`Processing ${postElements.length} post elements...`);
+        
         postElements.forEach((postElement, index) => {
             try {
                 const postData = this.extractPostData(postElement);
                 
+                console.log(`Post ${index + 1} extracted data:`, {
+                    author: postData.author,
+                    hasText: !!postData.postText && postData.postText !== 'No text content',
+                    hasTimestamp: !!postData.timestamp && postData.timestamp !== 'Unknown time',
+                    hasURL: !!postData.externalURL && postData.externalURL !== 'No URL available'
+                });
+                
                 const postId = postData.externalURL || `${postData.author}-${postData.postText.substring(0, 50)}`;
                 
-                if (postData.author && !this.scrapedPosts.has(postId) && this.posts.length < this.maxPosts) {
+                if (postData.author && postData.author !== 'Unknown Author' && !this.scrapedPosts.has(postId) && this.posts.length < this.maxPosts) {
                     this.posts.push(postData);
                     this.scrapedPosts.add(postId);
-                    console.log(`Extracted post ${this.posts.length}:`, postData.author);
+                    console.log(`✅ Added post ${this.posts.length}: ${postData.author}`);
+                } else {
+                    console.log(`❌ Skipped post ${index + 1}:`, {
+                        hasValidAuthor: postData.author && postData.author !== 'Unknown Author',
+                        alreadyScraped: this.scrapedPosts.has(postId),
+                        reachedMaxPosts: this.posts.length >= this.maxPosts
+                    });
                 }
             } catch (error) {
                 console.error(`Error extracting post ${index}:`, error);
             }
         });
+        
+        console.log(`Collection complete: ${this.posts.length} valid posts found`);
     }
 
     extractPostData(postElement) {
