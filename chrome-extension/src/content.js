@@ -151,9 +151,14 @@ class LinkedInFeedScraper {
             'div[data-urn*="urn:li:activity"]',
             '.feed-shared-update-v2',
             '[data-id^="urn:li:activity:"]',
+            '.scaffold-finite-scroll__content > div[data-urn]',
+            '.feed-shared-update-v2__content-wrapper',
+            'article[data-urn]',
+            '.update-v2-social-activity',
             'article',
             '.scaffold-finite-scroll__content > div > div',
-            'div[class*="feed"][class*="update"]'
+            'div[class*="feed"][class*="update"]',
+            '.feed-shared-update-v2 > div'
         ];
 
         let postElements = [];
@@ -164,6 +169,12 @@ class LinkedInFeedScraper {
                 console.log(`Using selector: ${selector} (found ${postElements.length} elements)`);
                 break;
             }
+        }
+
+        if (postElements.length === 0) {
+            console.log('No posts found with standard selectors, trying broader approach...');
+            postElements = document.querySelectorAll('.scaffold-finite-scroll__content > div');
+            console.log(`Fallback selector found ${postElements.length} elements`);
         }
 
         if (postElements.length === 0) {
@@ -186,15 +197,16 @@ class LinkedInFeedScraper {
                 
                 const postId = postData.externalURL || `${postData.author}-${postData.postText.substring(0, 50)}`;
                 
-                if (postData.author && postData.author !== 'Unknown Author' && !this.scrapedPosts.has(postId) && this.posts.length < this.maxPosts) {
+                if (postData.author && postData.author !== 'Unknown Author' && postData.author.length > 1 && !this.scrapedPosts.has(postId) && this.posts.length < this.maxPosts) {
                     this.posts.push(postData);
                     this.scrapedPosts.add(postId);
                     console.log(`✅ Added post ${this.posts.length}: ${postData.author}`);
                 } else {
                     console.log(`❌ Skipped post ${index + 1}:`, {
-                        hasValidAuthor: postData.author && postData.author !== 'Unknown Author',
+                        hasValidAuthor: postData.author && postData.author !== 'Unknown Author' && postData.author.length > 1,
                         alreadyScraped: this.scrapedPosts.has(postId),
-                        reachedMaxPosts: this.posts.length >= this.maxPosts
+                        reachedMaxPosts: this.posts.length >= this.maxPosts,
+                        authorFound: postData.author
                     });
                 }
             } catch (error) {
@@ -207,17 +219,21 @@ class LinkedInFeedScraper {
 
     extractPostData(postElement) {
         const authorSelectors = [
+            '.update-components-actor__name .visually-hidden',
+            '.feed-shared-actor__name .visually-hidden', 
+            '.update-components-actor__name span[aria-hidden="false"]',
+            '.feed-shared-actor__name span[aria-hidden="false"]',
+            'a[data-control-name="actor_container"] span[aria-hidden="false"]',
+            '.feed-shared-actor__name a span[aria-hidden="false"]',
             '.update-components-actor__name',
             '.feed-shared-actor__name',
-            'a[data-control-name="actor_container"] span[aria-hidden="false"]',
-            '.feed-shared-actor__name span[aria-hidden="false"]',
-            '.update-components-actor__name span',
             '.feed-shared-update-v2__actor-name',
             'a[data-control-name="actor_container"] span',
             '.feed-shared-actor__name a span',
             '[data-control-name="actor_container"] .visually-hidden',
-            '.feed-shared-actor__name .visually-hidden',
-            'a[href*="/in/"] span[aria-hidden="false"]'
+            'a[href*="/in/"] span[aria-hidden="false"]',
+            '.update-components-actor__name span',
+            '.feed-shared-actor__name span'
         ];
 
         let author = 'Unknown Author';
@@ -230,9 +246,13 @@ class LinkedInFeedScraper {
         }
 
         const textSelectors = [
-            '.feed-shared-text',
-            '.update-components-text',
+            '.feed-shared-text .break-words span[dir="ltr"]',
+            '.update-components-text .break-words span[dir="ltr"]',
+            '.feed-shared-update-v2__commentary .break-words',
+            '.feed-shared-text__text-view span',
             '[data-test-id="main-feed-activity-card"] .break-words',
+            '.feed-shared-text',
+            '.update-components-text', 
             '.feed-shared-update-v2__commentary',
             '.feed-shared-text__text-view',
             '.break-words span[dir="ltr"]',
@@ -240,8 +260,7 @@ class LinkedInFeedScraper {
             '.update-components-text span',
             '.feed-shared-text .break-words',
             '.update-components-text .break-words',
-            '[data-test-id*="post-text"]',
-            '.feed-shared-update-v2__commentary .break-words'
+            '[data-test-id*="post-text"]'
         ];
 
         let postText = '';
