@@ -10,7 +10,8 @@
   ],
   "host_permissions": [
     "https://www.linkedin.com/*",
-    "https://linkedin.com/*"
+    "https://linkedin.com/*",
+    "http://localhost:3000/*"
   ],
   "content_scripts": [
     {
