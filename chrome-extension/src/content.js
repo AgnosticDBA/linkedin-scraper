@@ -147,6 +147,10 @@ class LinkedInFeedScraper {
     }
 
     collectVisiblePosts() {
+        console.log('=== DEBUG: Starting post collection ===');
+        console.log('Current URL:', window.location.href);
+        console.log('Page title:', document.title);
+        
         const postSelectors = [
             'div[data-urn*="urn:li:activity"]',
             '.feed-shared-update-v2',
@@ -158,16 +162,45 @@ class LinkedInFeedScraper {
 
         let postElements = [];
         
+        console.log('Testing selectors:');
         for (const selector of postSelectors) {
-            postElements = document.querySelectorAll(selector);
-            if (postElements.length > 0) {
-                console.log(`Using selector: ${selector} (found ${postElements.length} elements)`);
-                break;
+            const elements = document.querySelectorAll(selector);
+            console.log(`  ${selector}: ${elements.length} elements`);
+            if (elements.length > 0 && postElements.length === 0) {
+                postElements = elements;
+                console.log(`✅ Using selector: ${selector} (found ${postElements.length} elements)`);
             }
         }
 
         if (postElements.length === 0) {
-            console.log('No post elements found with any selector');
+            console.log('No posts found with standard selectors, trying additional patterns...');
+            const additionalSelectors = [
+                '.scaffold-finite-scroll__content > div',
+                '[data-urn]',
+                '.feed-shared-update-v2__content',
+                '.update-v2-social-activity',
+                'div[class*="update"]',
+                'div[class*="feed"]'
+            ];
+            
+            for (const selector of additionalSelectors) {
+                const elements = document.querySelectorAll(selector);
+                console.log(`  Additional ${selector}: ${elements.length} elements`);
+                if (elements.length > 0 && postElements.length === 0) {
+                    postElements = elements;
+                    console.log(`✅ Using additional selector: ${selector}`);
+                    break;
+                }
+            }
+        }
+
+        if (postElements.length === 0) {
+            console.log('❌ No post elements found with any selector');
+            console.log('Available elements on page:');
+            console.log('  Total divs:', document.querySelectorAll('div').length);
+            console.log('  Elements with data-urn:', document.querySelectorAll('[data-urn]').length);
+            console.log('  Elements with data-id:', document.querySelectorAll('[data-id]').length);
+            console.log('  Articles:', document.querySelectorAll('article').length);
             return;
         }
 
@@ -175,28 +208,42 @@ class LinkedInFeedScraper {
         
         postElements.forEach((postElement, index) => {
             try {
+                console.log(`\n--- Processing Post ${index + 1} ---`);
+                console.log('Element classes:', postElement.className);
+                console.log('Element data-urn:', postElement.getAttribute('data-urn'));
+                console.log('Element data-id:', postElement.getAttribute('data-id'));
+                
                 const postData = this.extractPostData(postElement);
                 
                 console.log(`Post ${index + 1} extracted data:`, {
                     author: postData.author,
+                    authorLength: postData.author.length,
+                    postText: postData.postText.substring(0, 100) + '...',
                     hasText: !!postData.postText && postData.postText !== 'No text content',
+                    timestamp: postData.timestamp,
                     hasTimestamp: !!postData.timestamp && postData.timestamp !== 'Unknown time',
+                    externalURL: postData.externalURL,
                     hasURL: !!postData.externalURL && postData.externalURL !== 'No URL available'
                 });
                 
                 const postId = postData.externalURL || `${postData.author}-${postData.postText.substring(0, 50)}`;
                 
-                if (postData.author && postData.author !== 'Unknown Author' && postData.author.length > 1 && !this.scrapedPosts.has(postId) && this.posts.length < this.maxPosts) {
+                const validationChecks = {
+                    hasValidAuthor: postData.author && postData.author !== 'Unknown Author' && postData.author.length > 1,
+                    alreadyScraped: this.scrapedPosts.has(postId),
+                    reachedMaxPosts: this.posts.length >= this.maxPosts,
+                    authorFound: postData.author
+                };
+                
+                if (validationChecks.hasValidAuthor && !validationChecks.alreadyScraped && !validationChecks.reachedMaxPosts) {
                     this.posts.push(postData);
                     this.scrapedPosts.add(postId);
                     console.log(`✅ Added post ${this.posts.length}: ${postData.author}`);
                 } else {
-                    console.log(`❌ Skipped post ${index + 1}:`, {
-                        hasValidAuthor: postData.author && postData.author !== 'Unknown Author' && postData.author.length > 1,
-                        alreadyScraped: this.scrapedPosts.has(postId),
-                        reachedMaxPosts: this.posts.length >= this.maxPosts,
-                        authorFound: postData.author
-                    });
+                    console.log(`❌ Skipped post ${index + 1}:`, validationChecks);
+                    if (!validationChecks.hasValidAuthor) {
+                        console.log(`   Author issue: "${postData.author}" (length: ${postData.author.length})`);
+                    }
                 }
             } catch (error) {
                 console.error(`Error extracting post ${index}:`, error);
@@ -222,10 +269,13 @@ class LinkedInFeedScraper {
         ];
 
         let author = 'Unknown Author';
+        console.log('  Testing author selectors:');
         for (const selector of authorSelectors) {
             const element = postElement.querySelector(selector);
+            console.log(`    ${selector}: ${element ? `"${element.textContent.trim()}"` : 'null'}`);
             if (element && element.textContent.trim()) {
                 author = element.textContent.trim();
+                console.log(`    ✅ Found author: "${author}"`);
                 break;
             }
         }
