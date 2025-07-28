@@ -151,14 +151,9 @@ class LinkedInFeedScraper {
             'div[data-urn*="urn:li:activity"]',
             '.feed-shared-update-v2',
             '[data-id^="urn:li:activity:"]',
-            '.scaffold-finite-scroll__content > div[data-urn]',
-            '.feed-shared-update-v2__content-wrapper',
-            'article[data-urn]',
-            '.update-v2-social-activity',
             'article',
             '.scaffold-finite-scroll__content > div > div',
-            'div[class*="feed"][class*="update"]',
-            '.feed-shared-update-v2 > div'
+            'div[class*="feed"][class*="update"]'
         ];
 
         let postElements = [];
@@ -169,12 +164,6 @@ class LinkedInFeedScraper {
                 console.log(`Using selector: ${selector} (found ${postElements.length} elements)`);
                 break;
             }
-        }
-
-        if (postElements.length === 0) {
-            console.log('No posts found with standard selectors, trying broader approach...');
-            postElements = document.querySelectorAll('.scaffold-finite-scroll__content > div');
-            console.log(`Fallback selector found ${postElements.length} elements`);
         }
 
         if (postElements.length === 0) {
@@ -219,21 +208,17 @@ class LinkedInFeedScraper {
 
     extractPostData(postElement) {
         const authorSelectors = [
-            '.update-components-actor__name .visually-hidden',
-            '.feed-shared-actor__name .visually-hidden', 
-            '.update-components-actor__name span[aria-hidden="false"]',
-            '.feed-shared-actor__name span[aria-hidden="false"]',
-            'a[data-control-name="actor_container"] span[aria-hidden="false"]',
-            '.feed-shared-actor__name a span[aria-hidden="false"]',
             '.update-components-actor__name',
             '.feed-shared-actor__name',
+            'a[data-control-name="actor_container"] span[aria-hidden="false"]',
+            '.feed-shared-actor__name span[aria-hidden="false"]',
+            '.update-components-actor__name span',
             '.feed-shared-update-v2__actor-name',
             'a[data-control-name="actor_container"] span',
             '.feed-shared-actor__name a span',
             '[data-control-name="actor_container"] .visually-hidden',
-            'a[href*="/in/"] span[aria-hidden="false"]',
-            '.update-components-actor__name span',
-            '.feed-shared-actor__name span'
+            '.feed-shared-actor__name .visually-hidden',
+            'a[href*="/in/"] span[aria-hidden="false"]'
         ];
 
         let author = 'Unknown Author';
@@ -246,13 +231,9 @@ class LinkedInFeedScraper {
         }
 
         const textSelectors = [
-            '.feed-shared-text .break-words span[dir="ltr"]',
-            '.update-components-text .break-words span[dir="ltr"]',
-            '.feed-shared-update-v2__commentary .break-words',
-            '.feed-shared-text__text-view span',
-            '[data-test-id="main-feed-activity-card"] .break-words',
             '.feed-shared-text',
-            '.update-components-text', 
+            '.update-components-text',
+            '[data-test-id="main-feed-activity-card"] .break-words',
             '.feed-shared-update-v2__commentary',
             '.feed-shared-text__text-view',
             '.break-words span[dir="ltr"]',
@@ -260,7 +241,8 @@ class LinkedInFeedScraper {
             '.update-components-text span',
             '.feed-shared-text .break-words',
             '.update-components-text .break-words',
-            '[data-test-id*="post-text"]'
+            '[data-test-id*="post-text"]',
+            '.feed-shared-update-v2__commentary .break-words'
         ];
 
         let postText = '';
@@ -323,23 +305,21 @@ class LinkedInFeedScraper {
         };
 
         try {
-            console.log(`Sending ${this.posts.length} posts to webhook:`, this.webhookUrl);
+            console.log(`Sending ${this.posts.length} posts to webhook via background script:`, this.webhookUrl);
             
-            const response = await fetch(this.webhookUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload)
+            const response = await chrome.runtime.sendMessage({
+                action: 'sendWebhook',
+                url: this.webhookUrl,
+                payload: payload
             });
 
-            if (response.ok) {
-                console.log('Successfully sent data to webhook');
+            if (response && response.success) {
+                console.log('Successfully sent data to webhook via background script');
             } else {
-                console.error('Webhook request failed:', response.status, response.statusText);
+                console.error('Background script webhook request failed:', response);
             }
         } catch (error) {
-            console.error('Error sending to webhook:', error);
+            console.error('Error sending to background script:', error);
         }
     }
 

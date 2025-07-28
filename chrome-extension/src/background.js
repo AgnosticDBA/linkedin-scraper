@@ -47,7 +47,30 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === 'scrapingComplete') {
+    if (request.action === 'sendWebhook') {
+        fetch(request.url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(request.payload)
+        })
+        .then(response => {
+            if (response.ok) {
+                console.log('Background script successfully sent webhook');
+                sendResponse({ success: true });
+            } else {
+                console.error('Background script webhook failed:', response.status, response.statusText);
+                sendResponse({ success: false, error: `HTTP ${response.status}` });
+            }
+        })
+        .catch(error => {
+            console.error('Background script webhook error:', error);
+            sendResponse({ success: false, error: error.message });
+        });
+        
+        return true;
+    } else if (request.action === 'scrapingComplete') {
         console.log('Scraping completed:', request.data);
         
         chrome.action.setBadgeText({
