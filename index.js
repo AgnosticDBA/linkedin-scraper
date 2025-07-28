@@ -1,6 +1,7 @@
 const express = require('express');
 const { Builder, By, until } = require('selenium-webdriver');
 const chrome = require('selenium-webdriver/chrome');
+const { exec } = require('child_process');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -441,6 +442,14 @@ app.post('/webhook/linkedin-to-bear', (req, res) => {
         
         bearNotes.forEach((bearUrl, index) => {
             console.log(`Creating Bear note ${index + 1}: ${bearUrl}`);
+            
+            exec(`open "${bearUrl}"`, (error, stdout, stderr) => {
+                if (error) {
+                    console.error(`Error creating Bear note ${index + 1}:`, error);
+                } else {
+                    console.log(`Bear note ${index + 1} created successfully`);
+                }
+            });
         });
         
         res.json({

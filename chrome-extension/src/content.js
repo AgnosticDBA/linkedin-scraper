@@ -1,4 +1,7 @@
-console.log('LinkedIn Feed Scraper: Content script loaded');
+console.log('LinkedIn Feed Scraper: Content script loaded - Version 1.0.3');
+console.log('Current URL:', window.location.href);
+console.log('Document ready state:', document.readyState);
+console.log('Chrome runtime available:', typeof chrome !== 'undefined' && typeof chrome.runtime !== 'undefined');
 
 class LinkedInFeedScraper {
     constructor() {
