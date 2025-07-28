@@ -358,13 +358,62 @@ class LinkedInFeedScraper {
         }
 
         let externalURL = '';
+        console.log(`  === URL EXTRACTION DEBUG ===`);
+        
         const linkElement = postElement.querySelector('a[href*="/posts/"], a[href*="/feed/update/"]');
+        console.log(`  Current selector result:`, linkElement ? linkElement.href : 'NOT FOUND');
+        
         if (linkElement) {
             const href = linkElement.getAttribute('href');
             if (href) {
                 externalURL = href.startsWith('http') ? href : `https://linkedin.com${href}`;
+                console.log(`  ✅ URL found with current selector: ${externalURL}`);
+            }
+        } else {
+            const allLinks = postElement.querySelectorAll('a[href]');
+            console.log(`  Total links in post: ${allLinks.length}`);
+            
+            const potentialUrls = [];
+            allLinks.forEach((link, idx) => {
+                const href = link.getAttribute('href');
+                if (href && (href.includes('linkedin.com') || href.startsWith('/'))) {
+                    console.log(`    Link ${idx + 1}: ${href}`);
+                    if (href.includes('activity') || href.includes('post') || href.includes('feed') || href.includes('urn:li:activity')) {
+                        console.log(`      *** POTENTIAL POST URL: ${href}`);
+                        potentialUrls.push(href);
+                    }
+                }
+            });
+            
+            const alternativeSelectors = [
+                'a[href*="activity"]',
+                'a[href*="urn:li:activity"]', 
+                'a[data-control-name*="post"]',
+                'a[data-control-name*="activity"]',
+                '.feed-shared-actor__name a',
+                '.update-components-actor__name a'
+            ];
+            
+            for (const selector of alternativeSelectors) {
+                const altElement = postElement.querySelector(selector);
+                if (altElement && altElement.href) {
+                    console.log(`    Alternative selector "${selector}" found: ${altElement.href}`);
+                    if (altElement.href.includes('activity') || altElement.href.includes('post')) {
+                        externalURL = altElement.href;
+                        console.log(`  ✅ URL found with alternative selector: ${externalURL}`);
+                        break;
+                    }
+                }
+            }
+            
+            if (!externalURL && potentialUrls.length > 0) {
+                externalURL = potentialUrls[0].startsWith('http') ? potentialUrls[0] : `https://linkedin.com${potentialUrls[0]}`;
+                console.log(`  ✅ URL found from potential URLs: ${externalURL}`);
             }
         }
+        
+        console.log(`  Final URL result: ${externalURL || 'No URL available'}`);
+        console.log(`  === END URL EXTRACTION DEBUG ===`);
 
         return {
             author,
