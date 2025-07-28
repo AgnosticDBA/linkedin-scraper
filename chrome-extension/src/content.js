@@ -12,7 +12,7 @@ class LinkedInFeedScraper {
     }
 
     async init() {
-        const result = await chrome.storage.sync.get(['webhookUrl', 'maxPosts', 'autoScrape']);
+        const result = await chrome.storage.sync.get(['webhookUrl', 'maxPosts', 'autoScrape', 'bearIntegration']);
         this.webhookUrl = result.webhookUrl || 'http://localhost:3000/webhook/linkedin-feed';
         this.maxPosts = result.maxPosts || 25;
         
@@ -394,6 +394,25 @@ class LinkedInFeedScraper {
             } else {
                 console.error('Background script webhook request failed:', response);
             }
+            
+            const settings = await chrome.storage.sync.get(['bearIntegration']);
+            if (settings.bearIntegration) {
+                const bearWebhookUrl = this.webhookUrl.replace('/webhook/linkedin-feed', '/webhook/linkedin-to-bear');
+                console.log('Sending to Bear integration endpoint:', bearWebhookUrl);
+                
+                const bearResponse = await chrome.runtime.sendMessage({
+                    action: 'sendWebhook',
+                    url: bearWebhookUrl,
+                    payload: payload
+                });
+                
+                if (bearResponse && bearResponse.success) {
+                    console.log('Successfully sent data to Bear integration');
+                } else {
+                    console.error('Bear integration request failed:', bearResponse);
+                }
+            }
+            
         } catch (error) {
             console.error('Error sending to background script:', error);
         }

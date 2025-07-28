@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const webhookUrlInput = document.getElementById('webhook-url');
     const maxPostsInput = document.getElementById('max-posts');
     const autoScrapeInput = document.getElementById('auto-scrape');
+    const bearIntegrationInput = document.getElementById('bear-integration');
     const settingsMessage = document.getElementById('settings-message');
 
     await loadSettings();
@@ -26,12 +27,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const result = await chrome.storage.sync.get([
             'webhookUrl', 
             'maxPosts', 
-            'autoScrape'
+            'autoScrape',
+            'bearIntegration'
         ]);
         
         webhookUrlInput.value = result.webhookUrl || 'http://localhost:3000/webhook/linkedin-feed';
         maxPostsInput.value = result.maxPosts || 25;
         autoScrapeInput.checked = result.autoScrape || false;
+        bearIntegrationInput.checked = result.bearIntegration || false;
     }
 
     async function updateStatus() {
@@ -133,7 +136,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const settings = {
                 webhookUrl: webhookUrlInput.value.trim(),
                 maxPosts: parseInt(maxPostsInput.value) || 25,
-                autoScrape: autoScrapeInput.checked
+                autoScrape: autoScrapeInput.checked,
+                bearIntegration: bearIntegrationInput.checked
             };
             
             if (settings.webhookUrl && !isValidUrl(settings.webhookUrl)) {

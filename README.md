@@ -9,6 +9,7 @@ A Node.js service that headless-browses LinkedIn, logs in with supplied cookies,
 - Fetches up to 25 home feed items
 - Returns structured JSON with author, postText, timestamp, and externalURL
 - RESTful API endpoint
+- Bear notes integration for automatic note creation from LinkedIn posts
 
 ## Installation
 
@@ -69,6 +70,38 @@ Scrapes LinkedIn home feed using provided cookies.
 #### GET /health
 
 Health check endpoint.
+
+#### POST /webhook/linkedin-to-bear
+
+Processes LinkedIn posts and creates Bear notes using Bear's X-callback URL scheme.
+
+**Request Body:**
+```json
+{
+  "success": true,
+  "count": 2,
+  "data": [
+    {
+      "author": "John Doe",
+      "postText": "Excited to share my latest project...",
+      "timestamp": "2h ago",
+      "externalURL": "https://linkedin.com/posts/johndoe_project-123456"
+    }
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "LinkedIn posts processed for Bear",
+  "notesCreated": 2,
+  "bearUrls": [
+    "bear://x-callback-url/create?title=LinkedIn%3A%20John%20Doe&text=Excited%20to%20share..."
+  ]
+}
+```
 
 #### GET /
 

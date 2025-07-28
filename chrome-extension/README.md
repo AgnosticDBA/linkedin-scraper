@@ -8,6 +8,7 @@ A Chrome extension that extracts LinkedIn feed posts in real browser context and
 - **Extracts up to 25 LinkedIn feed posts**
 - **Configurable webhook URL**
 - **Auto-scrape option**
+- **Bear notes integration** for automatic note creation
 - **Visual feedback and status indicators**
 - **Multiple CSS selector fallbacks** for reliability
 
@@ -29,7 +30,8 @@ Download all files from the `chrome-extension` folder to your local machine.
 3. Set webhook URL (default: `http://localhost:3000/webhook/linkedin-feed`)
 4. Adjust max posts if needed (default: 25)
 5. Enable auto-scrape if desired (will automatically scrape when you visit LinkedIn feed)
-6. Click "Save Settings"
+6. Enable Bear integration if desired (will create Bear notes from scraped posts)
+7. Click "Save Settings"
 
 ## Usage
 
@@ -144,10 +146,20 @@ You can configure the extension to send data to any webhook endpoint:
 
 ### Integration with Automation Platforms
 The extension works well with:
+- **Bear**: Automatic note creation from LinkedIn posts using X-callback URL scheme
 - **Zapier**: Use webhook trigger to receive LinkedIn data
 - **Make.com**: Set up webhook module to process feed data  
 - **n8n**: Create webhook node to handle incoming LinkedIn posts
 - **Custom APIs**: Any service that accepts JSON webhook data
+
+### Bear Integration
+When Bear integration is enabled, the extension will:
+1. Send scraped LinkedIn posts to the `/webhook/linkedin-to-bear` endpoint
+2. Format each post as a structured Bear note with title, content, and tags
+3. Use Bear's X-callback URL scheme to create notes programmatically
+4. Include post metadata (author, timestamp, source URL) in the note content
+
+**Note:** Bear app must be installed on your system for the integration to work.
 
 ## Development
 

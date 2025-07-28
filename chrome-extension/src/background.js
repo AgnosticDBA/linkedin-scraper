@@ -2,11 +2,12 @@
 chrome.runtime.onInstalled.addListener(() => {
     console.log('LinkedIn Feed Scraper extension installed');
     
-    chrome.storage.sync.get(['webhookUrl', 'maxPosts', 'autoScrape'], (result) => {
+    chrome.storage.sync.get(['webhookUrl', 'maxPosts', 'autoScrape', 'bearIntegration'], (result) => {
         const defaults = {
             webhookUrl: result.webhookUrl || 'http://localhost:3000/webhook/linkedin-feed',
             maxPosts: result.maxPosts || 25,
-            autoScrape: result.autoScrape || false
+            autoScrape: result.autoScrape || false,
+            bearIntegration: result.bearIntegration || false
         };
         
         chrome.storage.sync.set(defaults);

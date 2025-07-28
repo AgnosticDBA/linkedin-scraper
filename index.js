@@ -413,12 +413,59 @@ app.post('/webhook/linkedin-feed', (req, res) => {
     }
 });
 
+function createBearNote(linkedinPost) {
+    const title = `LinkedIn: ${linkedinPost.author}`;
+    const text = `${linkedinPost.postText}\n\n**Source:** ${linkedinPost.externalURL}\n**Posted:** ${linkedinPost.timestamp}`;
+    const tags = 'linkedin,social-media';
+    
+    const bearUrl = `bear://x-callback-url/create?` +
+        `title=${encodeURIComponent(title)}&` +
+        `text=${encodeURIComponent(text)}&` +
+        `tags=${encodeURIComponent(tags)}`;
+    
+    return bearUrl;
+}
+
+app.post('/webhook/linkedin-to-bear', (req, res) => {
+    try {
+        console.log('=== BEAR INTEGRATION REQUEST RECEIVED ===');
+        console.log('Posts count:', req.body.count);
+        
+        if (!req.body.data || !Array.isArray(req.body.data)) {
+            return res.status(400).json({
+                error: 'Invalid payload - data array required'
+            });
+        }
+        
+        const bearNotes = req.body.data.map(post => createBearNote(post));
+        
+        bearNotes.forEach((bearUrl, index) => {
+            console.log(`Creating Bear note ${index + 1}: ${bearUrl}`);
+        });
+        
+        res.json({
+            success: true,
+            message: 'LinkedIn posts processed for Bear',
+            notesCreated: bearNotes.length,
+            bearUrls: bearNotes
+        });
+        
+    } catch (error) {
+        console.error('Bear integration error:', error);
+        res.status(500).json({
+            error: 'Failed to process LinkedIn posts for Bear',
+            message: error.message
+        });
+    }
+});
+
 app.get('/', (req, res) => {
     res.json({
         message: 'LinkedIn Feed Scraper API',
         endpoints: {
             'POST /scrape-linkedin-feed': 'Scrape LinkedIn home feed with cookies',
             'POST /webhook/linkedin-feed': 'Webhook endpoint for Chrome extension data',
+            'POST /webhook/linkedin-to-bear': 'Process LinkedIn posts and create Bear notes',
             'GET /health': 'Health check endpoint'
         },
         usage: {
