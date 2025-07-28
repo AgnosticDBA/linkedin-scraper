@@ -1,0 +1,27 @@
+{
+  "name": "linkedin-scraper",
+  "version": "1.0.0",
+  "description": "A Node.js service that headless-browses LinkedIn and fetches home feed items",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "chromedriver": "^138.0.4",
+    "express": "^4.18.2",
+    "playwright": "^1.54.1",
+    "selenium-webdriver": "^4.15.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "linkedin",
+    "scraper",
+    "headless",
+    "selenium"
+  ],
+  "author": "Devin AI",
+  "license": "MIT"
+}

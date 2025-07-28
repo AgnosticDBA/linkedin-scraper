@@ -1,0 +1,36 @@
+{
+  "success": true,
+  "count": 25,
+  "data": [
+    {
+      "author": "John Smith",
+      "postText": "Excited to announce that our team just launched a new AI-powered analytics platform! After months of hard work, we're finally ready to help businesses make data-driven decisions faster than ever before. #AI #Analytics #Innovation",
+      "timestamp": "2024-01-28T09:15:00Z",
+      "externalURL": "https://linkedin.com/posts/johnsmith_ai-analytics-innovation-activity-7158123456789"
+    },
+    {
+      "author": "Sarah Johnson",
+      "postText": "Just completed my certification in cloud architecture! The journey was challenging but incredibly rewarding. Looking forward to applying these new skills in upcoming projects.",
+      "timestamp": "3h ago",
+      "externalURL": "https://linkedin.com/posts/sarahjohnson_cloud-certification-activity-7158098765432"
+    },
+    {
+      "author": "Tech Startup Weekly",
+      "postText": "🚀 This week's startup spotlight: A revolutionary fintech company that's making banking accessible to underserved communities. Their mobile-first approach is changing lives across emerging markets.",
+      "timestamp": "2024-01-28T06:30:00Z",
+      "externalURL": "https://linkedin.com/posts/techstartupweekly_fintech-banking-activity-7158087654321"
+    },
+    {
+      "author": "Michael Chen",
+      "postText": "Reflecting on 2023: What an incredible year for machine learning breakthroughs! From GPT-4 to advanced computer vision models, we're witnessing the future unfold before our eyes. What's your prediction for 2024?",
+      "timestamp": "1d ago",
+      "externalURL": "https://linkedin.com/posts/michaelchen_machinelearning-ai-activity-7157876543210"
+    },
+    {
+      "author": "LinkedIn Learning",
+      "postText": "New course alert! 📚 'Advanced Python for Data Science' is now live. Learn advanced techniques for data manipulation, visualization, and machine learning with real-world projects.",
+      "timestamp": "2024-01-27T14:20:00Z",
+      "externalURL": "https://linkedin.com/posts/linkedinlearning_python-datascience-activity-7157654321098"
+    }
+  ]
+}
