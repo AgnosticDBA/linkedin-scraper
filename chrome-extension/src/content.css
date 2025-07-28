@@ -1,0 +1,17 @@
+/* LinkedIn Feed Scraper Styles */
+
+#linkedin-scraper-button {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+#linkedin-scraper-button div:hover {
+    transform: scale(1.05);
+    transition: transform 0.2s ease;
+}
+
+/* Hide scraper button when printing */
+@media print {
+    #linkedin-scraper-button {
+        display: none !important;
+    }
+}
