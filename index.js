@@ -414,20 +414,69 @@ app.post('/webhook/linkedin-feed', (req, res) => {
     }
 });
 
-function createBearNote(linkedinPost) {
+async function createBearNote(linkedinPost) {
     const title = `LinkedIn: ${linkedinPost.author}`;
-    const text = `${linkedinPost.postText}\n\n**Source:** ${linkedinPost.externalURL}\n**Posted:** ${linkedinPost.timestamp}`;
+    
+    let text = `# ${linkedinPost.author}\n\n`;
+    text += `${linkedinPost.postText}\n\n`;
+    
+    if (linkedinPost.mediaAttachments && linkedinPost.mediaAttachments.length > 0) {
+        text += `## Media Attachments\n\n`;
+        linkedinPost.mediaAttachments.forEach(media => {
+            if (media.type === 'image') {
+                text += `![${media.alt}](${media.url})\n\n`;
+            } else if (media.type === 'document') {
+                text += `📄 [${media.title}](${media.url})\n\n`;
+            }
+        });
+    }
+    
+    text += `---\n`;
+    text += `**Source:** [LinkedIn Post](${linkedinPost.externalURL})\n`;
+    text += `**Posted:** ${linkedinPost.timestamp}\n`;
+    text += `**Scraped:** ${new Date().toISOString()}`;
+    
     const tags = 'linkedin,social-media';
     
-    const bearUrl = `bear://x-callback-url/create?` +
+    let bearUrl = `bear://x-callback-url/create?` +
         `title=${encodeURIComponent(title)}&` +
         `text=${encodeURIComponent(text)}&` +
         `tags=${encodeURIComponent(tags)}`;
     
+    if (linkedinPost.mediaAttachments && linkedinPost.mediaAttachments.length > 0) {
+        const firstImage = linkedinPost.mediaAttachments.find(m => m.type === 'image');
+        if (firstImage) {
+            try {
+                const imageData = await downloadAndEncodeImage(firstImage.url);
+                if (imageData) {
+                    bearUrl += `&file=${encodeURIComponent(imageData.base64)}&filename=${encodeURIComponent(imageData.filename)}`;
+                }
+            } catch (error) {
+                console.log('Could not download image for Bear attachment:', error.message);
+            }
+        }
+    }
+    
     return bearUrl;
 }
 
-app.post('/webhook/linkedin-to-bear', (req, res) => {
+async function downloadAndEncodeImage(imageUrl) {
+    try {
+        const response = await fetch(imageUrl);
+        if (!response.ok) return null;
+        
+        const buffer = await response.arrayBuffer();
+        const base64 = Buffer.from(buffer).toString('base64');
+        const filename = `linkedin-image-${Date.now()}.jpg`;
+        
+        return { base64, filename };
+    } catch (error) {
+        console.error('Error downloading image:', error);
+        return null;
+    }
+}
+
+app.post('/webhook/linkedin-to-bear', async (req, res) => {
     try {
         console.log('=== BEAR INTEGRATION REQUEST RECEIVED ===');
         console.log('Posts count:', req.body.count);
@@ -438,7 +487,7 @@ app.post('/webhook/linkedin-to-bear', (req, res) => {
             });
         }
         
-        const bearNotes = req.body.data.map(post => createBearNote(post));
+        const bearNotes = await Promise.all(req.body.data.map(post => createBearNote(post)));
         
         bearNotes.forEach((bearUrl, index) => {
             console.log(`Creating Bear note ${index + 1}: ${bearUrl}`);

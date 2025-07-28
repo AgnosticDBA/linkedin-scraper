@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         bearIntegrationInput.checked = result.bearIntegration || false;
     }
 
-    async function updateStatus() {
+    async function updateStatus(retryCount = 0) {
         try {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
             
@@ -60,6 +60,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             scrapeButton.textContent = '🚀 Start Scraping';
             
             chrome.tabs.sendMessage(tab.id, { action: 'getStatus' }, (response) => {
+                if (chrome.runtime.lastError) {
+                    console.log('Content script not ready, retry:', retryCount);
+                    if (retryCount < 3) {
+                        setTimeout(() => updateStatus(retryCount + 1), 1000);
+                    } else {
+                        scrapingStatus.textContent = 'Extension loading...';
+                    }
+                    return;
+                }
                 if (response) {
                     scrapingStatus.textContent = response.isActive ? 'Scraping...' : 'Ready';
                     postsCount.textContent = response.postsFound || 0;
@@ -86,11 +95,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             scrapingStatus.textContent = 'Starting...';
             
             chrome.tabs.sendMessage(tab.id, { action: 'startScraping' }, (response) => {
+                if (chrome.runtime.lastError) {
+                    console.error('Error starting scraping:', chrome.runtime.lastError);
+                    scrapeButton.disabled = false;
+                    scrapeButton.textContent = '🚀 Start Scraping';
+                    scrapingStatus.textContent = 'Connection Error';
+                    return;
+                }
+                
                 if (response && response.success) {
                     scrapingStatus.textContent = 'Scraping...';
                     
                     const pollInterval = setInterval(() => {
                         chrome.tabs.sendMessage(tab.id, { action: 'getStatus' }, (statusResponse) => {
+                            if (chrome.runtime.lastError) {
+                                console.log('Polling error:', chrome.runtime.lastError);
+                                return;
+                            }
                             if (statusResponse) {
                                 scrapingStatus.textContent = statusResponse.isActive ? 'Scraping...' : 'Complete';
                                 postsCount.textContent = statusResponse.postsFound || 0;
