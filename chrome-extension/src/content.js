@@ -213,6 +213,12 @@ class LinkedInFeedScraper {
                 console.log('Element data-urn:', postElement.getAttribute('data-urn'));
                 console.log('Element data-id:', postElement.getAttribute('data-id'));
                 
+                const isAdvertisement = postElement.textContent.includes('Promoted');
+                if (isAdvertisement) {
+                    console.log(`❌ Skipped post ${index + 1}: Advertisement detected`);
+                    return;
+                }
+
                 const postData = this.extractPostData(postElement);
                 
                 console.log(`Post ${index + 1} extracted data:`, {
@@ -255,28 +261,48 @@ class LinkedInFeedScraper {
 
     extractPostData(postElement) {
         const authorSelectors = [
+            'a[href*="/in/"] span.visually-hidden',
+            'a[href*="/company/"] span.visually-hidden', 
+            
+            'a[href*="/in/"] .visually-hidden',
+            'a[href*="/company/"] .visually-hidden',
+            '.update-components-actor__single-line-truncate',
+            
             '.update-components-actor__name',
             '.feed-shared-actor__name',
             'a[data-control-name="actor_container"] span[aria-hidden="false"]',
             '.feed-shared-actor__name span[aria-hidden="false"]',
             '.update-components-actor__name span',
-            '.feed-shared-update-v2__actor-name',
-            'a[data-control-name="actor_container"] span',
-            '.feed-shared-actor__name a span',
-            '[data-control-name="actor_container"] .visually-hidden',
-            '.feed-shared-actor__name .visually-hidden',
-            'a[href*="/in/"] span[aria-hidden="false"]'
+            '.feed-shared-update-v2__actor-name'
         ];
 
         let author = 'Unknown Author';
-        console.log('  Testing author selectors:');
+        console.log('  Testing author selectors...');
         for (const selector of authorSelectors) {
             const element = postElement.querySelector(selector);
-            console.log(`    ${selector}: ${element ? `"${element.textContent.trim()}"` : 'null'}`);
             if (element && element.textContent.trim()) {
                 author = element.textContent.trim();
-                console.log(`    ✅ Found author: "${author}"`);
+                console.log(`    ✅ Found author: "${author}" using ${selector}`);
                 break;
+            }
+        }
+
+        if (author === 'Unknown Author') {
+            console.log('  No author found with standard selectors, trying fallback methods...');
+            
+            const profileLinks = postElement.querySelectorAll('a[href*="/in/"], a[href*="/company/"]');
+            for (const link of profileLinks) {
+                const hiddenSpans = link.querySelectorAll('.visually-hidden');
+                for (const span of hiddenSpans) {
+                    const text = span.textContent.trim();
+                    if (text && text.length > 2 && !text.includes('•') && !text.includes('ago') && 
+                        !text.includes('Follow') && !text.includes('followers') && !text.includes('3rd+')) {
+                        author = text;
+                        console.log(`    ✅ Fallback method found author: "${author}"`);
+                        break;
+                    }
+                }
+                if (author !== 'Unknown Author') break;
             }
         }
 
