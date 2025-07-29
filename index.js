@@ -418,23 +418,34 @@ async function createBearNote(linkedinPost) {
     const title = `LinkedIn: ${linkedinPost.author}`;
     
     let text = `# ${linkedinPost.author}\n\n`;
-    text += `${linkedinPost.postText}\n\n`;
+    
+    const formattedPostText = linkedinPost.postText
+        .replace(/\n\n+/g, '\n\n') // Normalize multiple line breaks
+        .replace(/\n/g, '\n\n') // Add proper paragraph spacing
+        .trim();
+    
+    text += `${formattedPostText}\n\n`;
     
     if (linkedinPost.mediaAttachments && linkedinPost.mediaAttachments.length > 0) {
-        text += `## Media Attachments\n\n`;
-        linkedinPost.mediaAttachments.forEach(media => {
+        text += `## 📎 Media Attachments\n\n`;
+        linkedinPost.mediaAttachments.forEach((media, index) => {
             if (media.type === 'image') {
-                text += `![${media.alt}](${media.url})\n\n`;
+                text += `🖼️ **Image ${index + 1}:** ![${media.alt || 'LinkedIn image'}](${media.url})\n\n`;
             } else if (media.type === 'document') {
-                text += `📄 [${media.title}](${media.url})\n\n`;
+                text += `📄 **Document ${index + 1}:** [${media.title || 'LinkedIn document'}](${media.url})\n\n`;
             }
         });
     }
     
-    text += `---\n`;
-    text += `**Source:** [LinkedIn Post](${linkedinPost.externalURL})\n`;
-    text += `**Posted:** ${linkedinPost.timestamp}\n`;
-    text += `**Scraped:** ${new Date().toISOString()}`;
+    text += `---\n\n`;
+    text += `**📍 Source:** [LinkedIn Post](${linkedinPost.externalURL})\n\n`;
+    text += `**🕒 Posted:** ${linkedinPost.timestamp}\n\n`;
+    text += `**🤖 Scraped:** ${new Date().toLocaleString()}\n\n`;
+    
+    const hashtags = extractHashtags(linkedinPost.postText);
+    if (hashtags.length > 0) {
+        text += `**🏷️ Hashtags:** ${hashtags.join(', ')}\n\n`;
+    }
     
     const tags = 'linkedin,social-media';
     
@@ -460,14 +471,36 @@ async function createBearNote(linkedinPost) {
     return bearUrl;
 }
 
+function extractHashtags(text) {
+    const hashtagRegex = /#[\w]+/g;
+    const matches = text.match(hashtagRegex);
+    return matches ? matches : [];
+}
+
 async function downloadAndEncodeImage(imageUrl) {
     try {
-        const response = await fetch(imageUrl);
-        if (!response.ok) return null;
+        const response = await fetch(imageUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Referer': 'https://www.linkedin.com/'
+            }
+        });
+        
+        if (!response.ok) {
+            console.log(`Failed to download image: ${response.status} ${response.statusText}`);
+            return null;
+        }
         
         const buffer = await response.arrayBuffer();
         const base64 = Buffer.from(buffer).toString('base64');
-        const filename = `linkedin-image-${Date.now()}.jpg`;
+        
+        const contentType = response.headers.get('content-type') || 'image/jpeg';
+        const extension = contentType.includes('png') ? 'png' : 
+                         contentType.includes('gif') ? 'gif' : 'jpg';
+        
+        const filename = `linkedin-image-${Date.now()}.${extension}`;
         
         return { base64, filename };
     } catch (error) {

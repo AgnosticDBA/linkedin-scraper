@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     console.error('Error starting scraping:', chrome.runtime.lastError);
                     scrapeButton.disabled = false;
                     scrapeButton.textContent = '🚀 Start Scraping';
-                    scrapingStatus.textContent = 'Connection Error';
+                    scrapingStatus.textContent = 'Connection Error - Try reloading page';
                     return;
                 }
                 
@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } else {
                     scrapeButton.disabled = false;
                     scrapeButton.textContent = '🚀 Start Scraping';
-                    scrapingStatus.textContent = 'Error';
+                    scrapingStatus.textContent = 'Error - Check console';
                 }
             });
             

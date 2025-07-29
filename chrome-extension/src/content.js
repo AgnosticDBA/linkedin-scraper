@@ -1,4 +1,4 @@
-console.log('LinkedIn Feed Scraper: Content script loaded - Version 1.0.4');
+console.log('LinkedIn Feed Scraper: Content script loaded - Version 1.0.5');
 console.log('Current URL:', window.location.href);
 console.log('Document ready state:', document.readyState);
 console.log('Chrome runtime available:', typeof chrome !== 'undefined' && typeof chrome.runtime !== 'undefined');
@@ -15,28 +15,49 @@ class LinkedInFeedScraper {
     }
 
     async init() {
-        const result = await chrome.storage.sync.get(['webhookUrl', 'maxPosts', 'autoScrape', 'bearIntegration']);
-        this.webhookUrl = result.webhookUrl || 'http://localhost:3000/webhook/linkedin-feed';
-        this.maxPosts = result.maxPosts || 25;
-        
-        this.addScraperUI();
-        
-        if (result.autoScrape) {
-            setTimeout(() => this.startScraping(), 2000);
-        }
-        
-        chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-            if (request.action === 'startScraping') {
-                this.startScraping();
-                sendResponse({success: true});
-            } else if (request.action === 'getStatus') {
-                sendResponse({
-                    isActive: this.isScrapingActive,
-                    postsFound: this.posts.length,
-                    url: window.location.href
+        try {
+            if (typeof chrome !== 'undefined' && chrome.storage && chrome.runtime) {
+                const result = await chrome.storage.sync.get(['webhookUrl', 'maxPosts', 'autoScrape', 'bearIntegration']);
+                this.webhookUrl = result.webhookUrl || 'http://localhost:3000/webhook/linkedin-feed';
+                this.maxPosts = result.maxPosts || 25;
+                
+                if (result.autoScrape) {
+                    setTimeout(() => this.startScraping(), 2000);
+                }
+                
+                chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+                    if (request.action === 'startScraping') {
+                        this.startScraping();
+                        sendResponse({success: true});
+                    } else if (request.action === 'getStatus') {
+                        sendResponse({
+                            isActive: this.isScrapingActive,
+                            postsFound: this.posts.length,
+                            url: window.location.href
+                        });
+                    }
+                    return true; // Keep message channel open for async responses
                 });
+                
+                console.log('✅ Chrome extension context initialized successfully');
+            } else {
+                console.warn('⚠️ Chrome extension context not available, using defaults');
+                this.webhookUrl = 'http://localhost:3000/webhook/linkedin-feed';
+                this.maxPosts = 25;
             }
-        });
+            
+            this.addScraperUI();
+            
+            window.linkedInScraper = this;
+            console.log('✅ LinkedIn scraper initialized and registered globally');
+            
+        } catch (error) {
+            console.error('❌ Error initializing LinkedIn scraper:', error);
+            this.webhookUrl = 'http://localhost:3000/webhook/linkedin-feed';
+            this.maxPosts = 25;
+            this.addScraperUI();
+            window.linkedInScraper = this;
+        }
     }
 
     addScraperUI() {
@@ -361,10 +382,12 @@ class LinkedInFeedScraper {
         console.log(`  === URL EXTRACTION DEBUG ===`);
         
         const activitySelectors = [
-            'a[href*="activity-"][href*="urn:li:activity"]',
             'a[href*="/posts/"][href*="_activity-"]',
+            'a[href*="/posts/"][href*="-activity-"]',
+            'a[href*="activity-"][href*="urn:li:activity"]',
             'a[data-control-name="overlay"][href*="activity"]',
-            'a[href*="feed/update/urn:li:activity"]'
+            'a[href*="feed/update/urn:li:activity"]',
+            'a[href*="/posts/"][href*="activity"]'
         ];
         
         for (const selector of activitySelectors) {
@@ -488,38 +511,107 @@ class LinkedInFeedScraper {
         try {
             console.log(`Sending ${this.posts.length} posts to webhook via background script:`, this.webhookUrl);
             
-            const response = await chrome.runtime.sendMessage({
-                action: 'sendWebhook',
-                url: this.webhookUrl,
-                payload: payload
-            });
+            if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+                try {
+                    const response = await new Promise((resolve, reject) => {
+                        chrome.runtime.sendMessage({
+                            action: 'sendWebhook',
+                            url: this.webhookUrl,
+                            payload: payload
+                        }, (response) => {
+                            if (chrome.runtime.lastError) {
+                                reject(new Error(chrome.runtime.lastError.message));
+                            } else {
+                                resolve(response);
+                            }
+                        });
+                    });
 
-            if (response && response.success) {
-                console.log('Successfully sent data to webhook via background script');
-            } else {
-                console.error('Background script webhook request failed:', response);
-            }
-            
-            const settings = await chrome.storage.sync.get(['bearIntegration']);
-            if (settings.bearIntegration) {
-                const bearWebhookUrl = this.webhookUrl.replace('/webhook/linkedin-feed', '/webhook/linkedin-to-bear');
-                console.log('Sending to Bear integration endpoint:', bearWebhookUrl);
-                
-                const bearResponse = await chrome.runtime.sendMessage({
-                    action: 'sendWebhook',
-                    url: bearWebhookUrl,
-                    payload: payload
-                });
-                
-                if (bearResponse && bearResponse.success) {
-                    console.log('Successfully sent data to Bear integration');
-                } else {
-                    console.error('Bear integration request failed:', bearResponse);
+                    if (response && response.success) {
+                        console.log('Successfully sent data to webhook via background script');
+                    } else {
+                        console.error('Background script webhook request failed:', response);
+                    }
+                    
+                    const settings = await chrome.storage.sync.get(['bearIntegration']);
+                    if (settings.bearIntegration) {
+                        const bearWebhookUrl = this.webhookUrl.replace('/webhook/linkedin-feed', '/webhook/linkedin-to-bear');
+                        console.log('Sending to Bear integration endpoint:', bearWebhookUrl);
+                        
+                        const bearResponse = await new Promise((resolve, reject) => {
+                            chrome.runtime.sendMessage({
+                                action: 'sendWebhook',
+                                url: bearWebhookUrl,
+                                payload: payload
+                            }, (response) => {
+                                if (chrome.runtime.lastError) {
+                                    reject(new Error(chrome.runtime.lastError.message));
+                                } else {
+                                    resolve(response);
+                                }
+                            });
+                        });
+                        
+                        if (bearResponse && bearResponse.success) {
+                            console.log('Successfully sent data to Bear integration');
+                        } else {
+                            console.error('Bear integration request failed:', bearResponse);
+                        }
+                    }
+                    
+                } catch (runtimeError) {
+                    console.warn('Chrome runtime unavailable, falling back to direct fetch:', runtimeError.message);
+                    await this.sendDirectToWebhook(payload);
                 }
+            } else {
+                console.warn('Chrome runtime not available, using direct fetch');
+                await this.sendDirectToWebhook(payload);
             }
             
         } catch (error) {
-            console.error('Error sending to background script:', error);
+            console.error('Error sending to webhook:', error);
+            await this.sendDirectToWebhook(payload);
+        }
+    }
+
+    async sendDirectToWebhook(payload) {
+        try {
+            console.log('Attempting direct fetch to webhook...');
+            const response = await fetch(this.webhookUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                console.log('Successfully sent data via direct fetch');
+                
+                const settings = await chrome.storage.sync.get(['bearIntegration']);
+                if (settings.bearIntegration) {
+                    const bearWebhookUrl = this.webhookUrl.replace('/webhook/linkedin-feed', '/webhook/linkedin-to-bear');
+                    console.log('Sending to Bear integration via direct fetch:', bearWebhookUrl);
+                    
+                    const bearResponse = await fetch(bearWebhookUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    if (bearResponse.ok) {
+                        console.log('Successfully sent to Bear integration via direct fetch');
+                    } else {
+                        console.error('Bear integration direct fetch failed:', bearResponse.status);
+                    }
+                }
+            } else {
+                console.error('Direct fetch failed:', response.status, response.statusText);
+            }
+        } catch (fetchError) {
+            console.error('Direct fetch error:', fetchError);
         }
     }
 
